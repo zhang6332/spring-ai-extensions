@@ -16,21 +16,21 @@
 
 package com.alibaba.cloud.ai.autoconfigure.mcp.discovery.client;
 
-import com.alibaba.cloud.ai.mcp.nacos.NacosMcpClientProperties;
-import com.alibaba.cloud.ai.mcp.nacos.service.NacosMcpOperationService;
-import com.alibaba.nacos.api.PropertyKeyConst;
-import com.alibaba.nacos.api.exception.NacosException;
-import com.alibaba.nacos.api.utils.StringUtils;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 
 import static com.alibaba.cloud.ai.mcp.nacos.NacosMcpProperties.DEFAULT_ADDRESS;
+import com.alibaba.cloud.ai.mcp.nacos.NacosMcpClientProperties;
+import com.alibaba.cloud.ai.mcp.nacos.service.NacosMcpOperationService;
+import com.alibaba.nacos.api.PropertyKeyConst;
+import com.alibaba.nacos.api.exception.NacosException;
+import com.alibaba.nacos.api.utils.StringUtils;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 
 /**
  * @author yingzi
@@ -41,7 +41,7 @@ import static com.alibaba.cloud.ai.mcp.nacos.NacosMcpProperties.DEFAULT_ADDRESS;
 public class NacosMcpAutoConfiguration {
 
 	@Bean
-	public Map<String, NacosMcpOperationService> nacosMcpOperationServiceMap(NacosMcpClientProperties nacosMcpClientProperties) {
+    public Map<String, NacosMcpOperationService> nacosMcpOperationServiceMap(NacosMcpClientProperties nacosMcpClientProperties, ObjectProvider<NacosMcpOperationService> registryServiceProvider) {
 		Map<String, NacosMcpOperationService> map = new HashMap<>();
 		nacosMcpClientProperties.getConfigs().forEach((name, nacosSseParameters) -> {
 			Properties properties = new Properties();
@@ -60,11 +60,9 @@ public class NacosMcpAutoConfiguration {
 			else {
 				properties.put(PropertyKeyConst.ENDPOINT, endpoint);
 			}
-
 			if (StringUtils.isEmpty(nacosSseParameters.serverAddr()) && StringUtils.isEmpty(nacosSseParameters.endpoint())) {
 				properties.put(PropertyKeyConst.SERVER_ADDR, DEFAULT_ADDRESS);
 			}
-
 			try {
 				NacosMcpOperationService nacosMcpOperationService = new NacosMcpOperationService(properties);
 				map.put(name, nacosMcpOperationService);
@@ -72,7 +70,9 @@ public class NacosMcpAutoConfiguration {
 				throw new RuntimeException(e);
 			}
 		});
-
+        registryServiceProvider.ifAvailable(service -> {
+            map.put("nacosMcpOperationService", service);
+        });
 		return map;
 	}
 
